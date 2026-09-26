@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>煤气罐猫 · 23圈赛博宇宙</title>
+    <style>
+        /* ==================== 本地字体加载 ==================== */
+        @font-face {
+            font-family: 'Plangothic P1';
+            src: local('Plangothic P1'), url('./PlangothicP1-Regular.ttf') format('truetype');
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Plangothic P2';
+            src: local('Plangothic P2'), url('./PlangothicP2-Regular.ttf') format('truetype');
+            font-display: swap;
+        }
+
+        /* ==================== 全局样式 ==================== */
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            /* 全局也使用 Plangothic，保持视觉统一 */
+            font-family: 'Plangothic P1', 'Plangothic P2', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 确保所有内容层级高于 Canvas 背景 */
+        h1, .subtitle, .cat-container {
+            z-index: 10;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #58a6ff;
+            text-shadow: 0 0 10px #58a6ff;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #8b949e;
+            margin-bottom: 30px;
+        }
+
+        .cat-container {
+            width: 280px;
+            height: 280px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        /* 猫猫占位符 */
+        .cat-image-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #8b949e, #c9d1d9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            box-shadow: 0 0 50px rgba(139, 148, 158, 0.5);
+            border: 5px solid #58a6ff;
+            transition: all 0.3s ease;
+        }
+
+        /* 喂食特效 */
+        .eating-effect {
+            border-color: #f0883e !important;
+            box-shadow: 0 0 80px rgba(240, 136, 62, 0.8) !important;
+            transform: scale(1.05);
+        }
+
+        /* 报错弹窗 */
+        .error-box {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(248, 81, 73, 0.95);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            width: 80%;
+            box-shadow: 0 0 20px red;
+        }
+
+        /* 彩虹猫拖尾 */
+        .nyan-trail {
+            position: absolute;
+            width: 80px;
+            height: 15px;
+            background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet);
+            border-radius: 10px;
+            pointer-events: none;
+            opacity: 0.8;
+            z-index: 5;
+            will-change: transform, opacity;
+        }
+
+        /* 震动特效 */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 极限性能 Canvas 背景层 -->
+    <canvas id="canvas" style="position: absolute; top: 0; left: 0; z-index: 0;"></canvas>
+
+    <!-- 页面内容层 -->
+    <h1>煤气罐猫 · 23圈赛博宇宙</h1>
+    <div class="subtitle">口碑极差，但销量极高之物 | V8 银渐层重工</div>
+
+    <div class="cat-container" onclick="triggerCatEvent()">
+        <div class="cat-image-placeholder" id="catFace">🐈</div>
+        <div class="error-box" id="errorBox">
+            Error: CatOverflowException<br>
+            猫太胖了，内存溢出！<br>
+            正在喂食猫条，请稍后...
+        </div>
+    </div>
+
+    <script>
+        // ==================== 初始化 Canvas ====================
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // ==================== Canvas 生僻字弹幕系统 ====================
+        const minCode = 0x20000; 
+        const maxCode = 0x2A6DF; 
+        const rareChars = []; // 存储掉落文字的数组
+        
+        function getRandomRareChar() {
+            const code = Math.floor(Math.random() * (maxCode - minCode + 1)) + minCode;
+            return String.fromCodePoint(code);
+        }
+
+        function spawnRareChar() {
+            // 每次生成 5 个，视觉密度拉满
+            for (let i = 0; i < 5; i++) {
+                const text = getRandomRareChar();
+                const x = Math.random() * canvas.width;
+                const y = -50;
+                // 速度极快，每秒下落 300~600 像素
+                const speed = Math.random() * 300 + 300;
+                const size = Math.random() * 20 + 20; // 字体 20~40px
+                const alpha = Math.random() * 0.1 + 0.05; // 透明度 0.05~0.15
+                
+                rareChars.push({ text, x, y, speed, size, alpha });
+            }
+        }
+
+        // 高性能渲染循环
+        let lastTime = 0;
+        function renderLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const deltaTime = (timestamp - lastTime) / 1000; // 秒
+            lastTime = timestamp;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 遍历并绘制
+            for (let i = rareChars.length - 1; i >= 0; i--) {
+                const char = rareChars[i];
+                char.y += char.speed * deltaTime;
+                
+                // 掉出屏幕底部则移除
+                if (char.y > canvas.height + 50) {
+                    rareChars.splice(i, 1);
+                    continue;
+                }
+                
+                ctx.font = `${char.size}px 'Plangothic P1', 'Plangothic P2', serif`;
+                ctx.fillStyle = `rgba(255, 255, 255, ${char.alpha})`;
+                ctx.fillText(char.text, char.x, char.y);
+            }
+            
+            requestAnimationFrame(renderLoop);
+        }
+        
+        // 启动渲染循环
+        requestAnimationFrame(renderLoop);
+        
+        // 极高频率生成（8ms 一次，每秒 125 次，每次 5 个 = 625 字/秒）
+        setInterval(spawnRareChar, 8);
+
+        // ==================== 彩虹猫拖尾 (DOM 版本，轻量级) ====================
+        document.addEventListener('mousemove', (e) => {
+            const trail = document.createElement('div');
+            trail.className = 'nyan-trail';
+            trail.style.left = (e.clientX - 40) + 'px';
+            trail.style.top = (e.clientY - 5) + 'px';
+            document.body.appendChild(trail);
+            setTimeout(() => { trail.remove(); }, 500);
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const trail = document.createElement('div');
+            trail.className = 'nyan-trail';
+            trail.style.left = (touch.clientX - 40) + 'px';
+            trail.style.top = (touch.clientY - 5) + 'px';
+            document.body.appendChild(trail);
+            setTimeout(() => { trail.remove(); }, 500);
+        }, { passive: true });
+
+        // ==================== 喂食逻辑 ====================
+        let isEating = false;
+
+        function triggerCatEvent() {
+            if (isEating) return;
+            isEating = true;
+
+            const errorBox = document.getElementById('errorBox');
+            const catFace = document.getElementById('catFace');
+            
+            errorBox.style.display = 'block';
+            catFace.classList.add('eating-effect');
+            catFace.innerText = '🍣';
+
+            document.body.style.animation = 'shake 0.5s';
+            
+            setTimeout(() => {
+                errorBox.style.display = 'none';
+                catFace.classList.remove('eating-effect');
+                catFace.innerText = '🐈';
+                document.body.style.animation = '';
+                isEating = false;
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
