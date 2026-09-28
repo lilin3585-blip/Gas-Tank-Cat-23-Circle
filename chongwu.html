@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Cnoosi.0 - 终极养成版桌宠</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #2c3e50; 
+        font-family: 'Segoe UI', monospace;
+        touch-action: none;
+        user-select: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    #hud {
+        position: fixed;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        backdrop-filter: blur(10px);
+        padding: 10px 24px;
+        border-radius: 30px;
+        font-size: 15px;
+        font-weight: bold;
+        z-index: 999;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    /* 顶部按钮组 */
+    .top-btns {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+        z-index: 1000;
+    }
+    .btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border: 2px dashed rgba(255,255,255,0.5);
+        padding: 10px 18px;
+        border-radius: 30px;
+        font-size: 14px;
+        cursor: pointer;
+        backdrop-filter: blur(5px);
+        display: inline-block;
+    }
+    #fileInput, #musicInput { display: none; }
+
+    /* 音乐播放按钮 */
+    #playMusicBtn {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: #27ae60;
+        color: #fff;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 30px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 15px rgba(39,174,96,0.4);
+    }
+
+    /* 底部喂食按钮 */
+    #feedBtn {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: rgba(255, 165, 0, 0.8);
+        color: #fff;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 30px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 4px 15px rgba(255,165,0,0.4);
+        display: none;
+        transition: transform 0.1s;
+    }
+    #feedBtn:active { transform: scale(0.9); }
+
+    #pet {
+        position: absolute;
+        width: 200px; 
+        height: 260px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        cursor: grab;
+        z-index: 10;
+        transition: left 0.1s ease-out, top 0.1s ease-out;
+        display: none; 
+    }
+
+    #pet-inner {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transform-origin: center bottom;
+    }
+
+    #body-bg {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-repeat: no-repeat;
+        background-size: contain; 
+        background-position: center;
+        z-index: 1;
+    }
+
+    .part {
+        position: absolute;
+        z-index: 3;
+        background: transparent;
+    }
+
+    .part-head { width: 60px; height: 60px; top: 10px; left: 50%; margin-left: -30px; }
+    .part-torso { width: 90px; height: 90px; top: 65px; left: 50%; margin-left: -45px; }
+    .part-limb-left { width: 50px; height: 90px; top: 65px; left: 5px; }
+    .part-limb-right { width: 50px; height: 90px; top: 65px; right: 5px; }
+    .part-leg-left { width: 45px; height: 90px; bottom: 0; left: 50%; margin-left: -45px; }
+    .part-leg-right { width: 45px; height: 90px; bottom: 0; left: 50%; margin-left: 0px; }
+
+    /* 飘字 */
+    .floating-text {
+        position: fixed;
+        color: #f1c40f;
+        font-weight: bold;
+        font-size: 20px;
+        z-index: 2000;
+        pointer-events: none;
+        animation: floatUp 1s ease-out forwards;
+    }
+    @keyframes floatUp {
+        0% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-80px); }
+    }
+
+    /* 飞落的食物 */
+    .food {
+        position: fixed;
+        font-size: 40px;
+        z-index: 2000;
+        pointer-events: none;
+        transform: translateY(-100px);
+        transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s;
+    }
+
+    /* --- 动画库 --- */
+    .dancing { animation: dance 0.4s infinite alternate ease-in-out; }
+    @keyframes dance {
+        0% { transform: rotate(-5deg); }
+        100% { transform: rotate(5deg); }
+    }
+
+    .jump { animation: jump 0.4s ease-out; }
+    @keyframes jump {
+        0% { transform: translateY(0) scaleY(1); }
+        40% { transform: translateY(-35px) scaleY(1.05); }
+        100% { transform: translateY(0) scaleY(1); }
+    }
+
+    .dizzy { animation: dizzy 0.3s infinite alternate; }
+    @keyframes dizzy {
+        0% { transform: rotate(-15deg); }
+        100% { transform: rotate(15deg); }
+    }
+
+    .landing { animation: landing 0.3s ease-out; }
+    @keyframes landing {
+        0% { transform: scaleY(1.2) scaleX(0.8); }
+        50% { transform: scaleY(0.9) scaleX(1.1); }
+        100% { transform: scaleY(1) scaleX(1); }
+    }
+
+    .eating { animation: eating 0.5s ease-in-out; }
+    @keyframes eating {
+        0% { transform: scaleY(1); }
+        30% { transform: scaleY(1.15) scaleX(0.95); }
+        100% { transform: scaleY(1); }
+    }
+
+    .listening { 
+        animation: listening 0.6s infinite alternate ease-in-out; 
+    }
+    @keyframes listening {
+        0% { transform: rotate(-2deg); }
+        100% { transform: rotate(2deg); }
+    }
+
+    .massage-gun {
+        animation: massage 0.05s infinite linear !important;
+    }
+    @keyframes massage {
+        0% { transform: translate(0, 0) rotate(0deg); }
+        25% { transform: translate(2px, -2px) rotate(1deg); }
+        50% { transform: translate(-2px, 2px) rotate(-1deg); }
+        75% { transform: translate(2px, 2px) rotate(0deg); }
+        100% { transform: translate(-2px, -2px) rotate(-1deg); }
+    }
+
+    .waving .part-limb-right { 
+        transform: rotate(-80deg) !important; 
+        transform-origin: top center; 
+    }
+</style>
+</head>
+<body>
+
+    <!-- 顶部按钮组 -->
+    <div class="top-btns">
+        <label for="fileInput" class="btn">📂 导入图片</label>
+        <label for="musicInput" class="btn">🎵 导入音乐</label>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+    <input type="file" id="musicInput" accept="audio/*">
+    
+    <!-- 音乐播放按钮（iOS 需要手动触发） -->
+    <button id="playMusicBtn">▶️ 播放音乐</button>
+    
+    <!-- 底部喂食按钮 -->
+    <button id="feedBtn">🍔 喂食</button>
+
+    <div id="hud">😊 请点击右上角导入图片</div>
+
+    <div id="pet">
+        <div id="pet-inner">
+            <div id="body-bg"></div>
+            <div class="part part-head"></div>
+            <div class="part part-torso"></div>
+            <div class="part part-limb-left"></div>
+            <div class="part part-limb-right"></div>
+            <div class="part part-leg-left"></div>
+            <div class="part part-leg-right"></div>
+        </div>
+    </div>
+
+    <!-- 音频播放器 -->
+    <audio id="bgMusic"></audio>
+
+<script>
+    const pet = document.getElementById('pet');
+    const petInner = document.getElementById('pet-inner');
+    const hud = document.getElementById('hud');
+    const fileInput = document.getElementById('fileInput');
+    const musicInput = document.getElementById('musicInput');
+    const bodyBg = document.getElementById('body-bg');
+    const feedBtn = document.getElementById('feedBtn');
+    const bgMusic = document.getElementById('bgMusic');
+    const playMusicBtn = document.getElementById('playMusicBtn');
+
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+    let idleTimer;
+    let isMassaging = false;
+    let isListening = false;
+    let hungerLevel = 0;
+    let favorability = 0;
+    let isMusicReady = false;
+
+    // --- 1. 导入图片 ---
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            document.querySelectorAll('body > *').forEach(el => {
+                if (el.tagName === 'IMG') el.remove();
+            });
+
+            bodyBg.style.backgroundImage = `url(${event.target.result})`;
+            pet.style.display = 'block';
+            feedBtn.style.display = 'block';
+            hud.textContent = '😊 导入成功！点我开始互动吧！';
+            startIdleLoop();
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // --- 2. 导入音乐（兼容 iOS） ---
+    musicInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const musicUrl = URL.createObjectURL(file);
+        bgMusic.src = musicUrl;
+        bgMusic.load();
+
+        isMusicReady = true;
+        playMusicBtn.style.display = 'block';
+        playMusicBtn.textContent = '▶️ 播放音乐';
+        
+        hud.textContent = '🎵 音乐已就绪，点击右边的绿色按钮播放！';
+    });
+
+    // 手动播放/暂停按钮
+    playMusicBtn.addEventListener('click', function() {
+        if (!isMusicReady) return;
+        
+        if (bgMusic.paused) {
+            bgMusic.play().then(() => {
+                isListening = true;
+                clearTimeout(idleTimer);
+                petInner.className = 'listening';
+                hud.textContent = '🎵 音乐播放中... 它正在认真听！';
+                playMusicBtn.textContent = '⏸ 暂停';
+            }).catch(err => {
+                hud.textContent = '❌ 播放失败，请检查音量或换首歌试试。';
+                console.error(err);
+            });
+        } else {
+            bgMusic.pause();
+            playMusicBtn.textContent = '▶️ 继续播放';
+            petInner.classList.remove('listening');
+            hud.textContent = '⏸ 音乐暂停了...';
+        }
+    });
+
+    // 音乐播完时的处理
+    bgMusic.onended = () => {
+        isListening = false;
+        petInner.classList.remove('listening');
+        
+        favorability += 10;
+        
+        const plusEl = document.createElement('div');
+        plusEl.className = 'floating-text';
+        plusEl.textContent = '+10 好感度';
+        const rect = pet.getBoundingClientRect();
+        plusEl.style.left = (rect.left + rect.width / 2 - 30) + 'px';
+        plusEl.style.top = (rect.top + 50) + 'px';
+        document.body.appendChild(plusEl);
+        setTimeout(() => plusEl.remove(), 1000);
+
+        hud.textContent = `😍 音乐真好听！好感度：${favorability}`;
+        petInner.classList.add('dancing');
+        playMusicBtn.textContent = '▶️ 播放音乐';
+        
+        setTimeout(() => {
+            petInner.classList.remove('dancing');
+            hud.textContent = '😊 你好！';
+            startIdleLoop();
+        }, 2500);
+    };
+
+    // --- 3. 拖拽逻辑 ---
+    pet.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        pet.style.transition = 'none';
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        const rect = pet.getBoundingClientRect();
+        initialLeft = rect.left;
+        initialTop = rect.top;
+        hud.textContent = '🤚 轻一点啦！';
+        clearTimeout(idleTimer);
+        petInner.className = '';
+        isMassaging = false;
+        isListening = false;
+    });
+
+    pet.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        
+        let newLeft = initialLeft + dx;
+        let newTop = initialTop + dy;
+        newLeft = Math.max(10, Math.min(newLeft, window.innerWidth - 210));
+        newTop = Math.max(10, Math.min(newTop, window.innerHeight - 270));
+        
+        pet.style.left = newLeft + 'px';
+        pet.style.top = newTop + 'px';
+    });
+
+    pet.addEventListener('touchend', () => {
+        isDragging = false;
+        pet.style.transition = 'left 0.1s ease-out, top 0.1s ease-out';
+        
+        petInner.classList.add('landing');
+        setTimeout(() => {
+            petInner.classList.remove('landing');
+        }, 300);
+
+        const rect = pet.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 50) {
+            hud.textContent = '😊 我已经在地上啦！';
+            setTimeout(() => { hud.textContent = '😊 你好！'; }, 2000);
+        } else {
+            hud.textContent = '😊 放我下来啦~';
+            setTimeout(() => { hud.textContent = '😊 你好！'; }, 2000);
+        }
+        
+        if (!isListening) startIdleLoop();
+    });
+
+    // --- 4. 点击互动（包含筋膜枪） ---
+    pet.addEventListener('click', () => {
+        if (isDragging || isListening) return;
+        
+        isMassaging = false;
+        petInner.className = '';
+        clearTimeout(idleTimer);
+
+        const reactions = ['jump', 'dizzy', 'wave', 'happy', 'massage'];
+        const reaction = reactions[Math.floor(Math.random() * reactions.length)];
+        
+        if (reaction === 'jump') {
+            petInner.classList.add('jump'); hud.textContent = '🤸 蹦跶！';
+            setTimeout(() => petInner.classList.remove('jump'), 500);
+        } else if (reaction === 'dizzy') {
+            petInner.classList.add('dizzy'); hud.textContent = '😵 哎呀！摔倒了...';
+            setTimeout(() => petInner.classList.remove('dizzy'), 800);
+        } else if (reaction === 'wave') {
+            petInner.classList.add('waving'); hud.textContent = '👋 嗨！要一起玩吗？';
+            setTimeout(() => petInner.classList.remove('waving'), 1200);
+        } else if (reaction === 'happy') {
+            petInner.classList.add('dancing'); hud.textContent = '🎵 开心得跳舞！';
+            setTimeout(() => petInner.classList.remove('dancing'), 1500);
+        } else if (reaction === 'massage') {
+            isMassaging = true;
+            petInner.classList.add('massage-gun'); 
+            hud.textContent = '🫨 突突突突突突突！啊啊啊！';
+            
+            setTimeout(() => {
+                if (isMassaging) {
+                    isMassaging = false;
+                    petInner.classList.remove('massage-gun');
+                    hud.textContent = '😵 我快被震散架了...';
+                    setTimeout(() => { hud.textContent = '😊 你好！'; }, 1500);
+                }
+            }, 1500);
+        }
+        
+        setTimeout(() => {
+            if (!isDragging && !isListening) startIdleLoop();
+        }, 1600);
+    });
+
+    // --- 5. 喂食功能 ---
+    feedBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (pet.style.display === 'none') return;
+
+        hungerLevel++;
+        
+        const foods = ['🍔', '🍎', '🍰', '🍕', '🍖'];
+        const foodEmoji = foods[Math.floor(Math.random() * foods.length)];
+        const foodEl = document.createElement('div');
+        foodEl.className = 'food';
+        foodEl.textContent = foodEmoji;
+        
+        const petRect = pet.getBoundingClientRect();
+        const startX = petRect.left + petRect.width / 2 + (Math.random() * 60 - 30);
+        const startY = petRect.top - 100;
+        
+        foodEl.style.left = startX + 'px';
+        foodEl.style.top = startY + 'px';
+        document.body.appendChild(foodEl);
+
+        setTimeout(() => {
+            foodEl.style.transform = `translateY(${petRect.top + 40 - startY}px)`;
+            foodEl.style.opacity = '0';
+        }, 50);
+
+        setTimeout(() => {
+            foodEl.remove();
+            
+            petInner.classList.remove('dancing', 'massage-gun', 'jump', 'dizzy', 'listening');
+            petInner.classList.add('eating');
+            hud.textContent = `🍽️ 好吃！饱食度：${hungerLevel}`;
+            
+            const plusEl = document.createElement('div');
+            plusEl.className = 'floating-text';
+            plusEl.textContent = '+1 饱食度';
+            plusEl.style.left = (petRect.left + petRect.width / 2) + 'px';
+            plusEl.style.top = (petRect.top + 60) + 'px';
+            document.body.appendChild(plusEl);
+            setTimeout(() => plusEl.remove(), 1000);
+
+            setTimeout(() => {
+                petInner.classList.remove('eating');
+                if (hungerLevel % 3 === 0) {
+                    hud.textContent = '😋 吃得超开心！跳舞庆祝！';
+                    petInner.classList.add('dancing');
+                    setTimeout(() => {
+                        petInner.classList.remove('dancing');
+                        hud.textContent = '😊 你好！';
+                        if (!isListening) startIdleLoop();
+                    }, 2000);
+                } else {
+                    hud.textContent = '😊 好好吃！';
+                    setTimeout(() => { hud.textContent = '😊 你好！'; if (!isListening) startIdleLoop(); }, 1500);
+                }
+            }, 500);
+            
+        }, 1000);
+    });
+
+    // --- 6. 随机发呆 ---
+    function startIdleLoop() {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            if (!isDragging && !isMassaging && !isListening) {
+                const actions = ['dance', 'tiltLeft', 'tiltRight', 'sleep', 'hungry'];
+                const action = actions[Math.floor(Math.random() * actions.length)];
+                petInner.className = '';
+
+                if (action === 'dance') {
+                    petInner.classList.add('dancing'); hud.textContent = '🕺 在扭动！';
+                    setTimeout(() => { petInner.classList.remove('dancing'); hud.textContent = '😊 你好！'; }, 2500);
+                } else if (action === 'tiltLeft') {
+                    petInner.style.transform = 'rotate(-15deg)'; hud.textContent = '👈 歪头看看...';
+                    setTimeout(() => { petInner.style.transform = 'rotate(0)'; hud.textContent = '😊 你好！'; }, 1500);
+                } else if (action === 'tiltRight') {
+                    petInner.style.transform = 'rotate(15deg)'; hud.textContent = '👉 那边有什么？';
+                    setTimeout(() => { petInner.style.transform = 'rotate(0)'; hud.textContent = '😊 你好！'; }, 1500);
+                } else if (action === 'sleep') {
+                    petInner.style.transform = 'scaleY(0.95)'; hud.textContent = '💤 打个盹...';
+                    setTimeout(() => { petInner.style.transform = 'scaleY(1)'; hud.textContent = '😊 你好！'; }, 3000);
+                } else if (action === 'hungry') {
+                    if (hungerLevel < 3) {
+                        hud.textContent = '😋 肚子饿了...点右下角喂我！';
+                    } else {
+                        hud.textContent = `😊 吃得很饱！好感度：${favorability}`;
+                    }
+                    setTimeout(() => { hud.textContent = '😊 你好！'; }, 3000);
+                }
+                startIdleLoop();
+            }
+        }, 4000 + Math.random() * 5000);
+    }
+</script>
+</body>
+</html>
