@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>赛博提取器 · 多语言音视频转文字</title>
-  
+  <title>赛博提取器 · 云端 AI 转写</title>
   <style>
     *, *::before, *::after {
       font-family: "WenJinMincho", "Noto Serif SC", "Times New Roman", "明朝", "KaiTi", serif !important;
@@ -26,8 +25,8 @@
     h1 { font-size: 2rem; color: #3b3229; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 10px; }
     .subhead { color: #6e6254; margin-bottom: 2rem; font-size: 0.95rem; border-left: 4px solid #cbb9a4; padding-left: 1rem; }
 
-    .control-panel { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .form-group { flex: 1; min-width: 200px; }
+    .control-panel { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    .form-group { flex: 1; }
     .form-group label { display: block; font-size: 0.85rem; margin-bottom: 0.4rem; color: #8c7b68; font-weight: bold;}
     .form-group select { width: 100%; border: 1.5px solid #d9cfc0; border-radius: 1rem; padding: 0.8rem 1.2rem; font-size: 1rem; outline: none; background: #fefcf8; }
 
@@ -37,252 +36,115 @@
     .upload-box:hover { border-color: #a8886a; background: #faf6f0; }
     .upload-box input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
     .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; color: #a8886a; }
-    
-    video { width: 100%; border-radius: 1rem; margin-bottom: 1.5rem; display: none; background: #000; max-height: 400px; }
 
-    .action-btns { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
-    .btn { flex: 1; border: none; border-radius: 40px; padding: 1rem; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
-    .btn-start { background: #5f4e3c; color: white; }
+    .btn-start { width: 100%; border: none; border-radius: 40px; padding: 1rem; font-size: 1.1rem; font-weight: bold; cursor: pointer; background: #5f4e3c; color: white; margin-bottom: 1.5rem; transition: 0.2s; }
     .btn-start:hover { background: #3e3329; }
     .btn-start:disabled { background: #b1a392; cursor: not-allowed; }
-    .btn-stop { background: #a14a4a; color: white; display: none; }
-    .btn-test { background: #a8886a; color: white; margin-bottom: 1rem; display: none; }
-    
-    .result-box {
-      background: #faf6f0; border-radius: 1.5rem; padding: 1.5rem; border: 1px solid #e6ddd2; min-height: 150px; position: relative;
-    }
-    .result-text { font-size: 1.1rem; line-height: 1.8; color: #2e2b28; white-space: pre-wrap; outline: none; max-height: 300px; overflow-y: auto; }
-    .btn-copy { position: absolute; top: 1rem; right: 1rem; background: #ede7df; border: none; border-radius: 20px; padding: 0.4rem 1rem; cursor: pointer; font-size: 0.85rem; }
-    .btn-copy:hover { background: #d9cfc0; }
 
-    .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ccc; margin-right: 5px; }
-    .status-dot.active { background: #4caf50; box-shadow: 0 0 8px #4caf50; animation: pulse 1.5s infinite; }
-    .status-dot.error { background: #f44336; box-shadow: 0 0 8px #f44336; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+    .result-box {
+      background: #faf6f0; border-radius: 1.5rem; padding: 1.5rem; border: 1px solid #e6ddd2; min-height: 150px; position: relative; display: none;
+    }
+    .result-text { font-size: 1.1rem; line-height: 1.8; color: #2e2b28; white-space: pre-wrap; outline: none; max-height: 400px; overflow-y: auto; }
     
-    /* 日志区，方便排查问题 */
-    .log-box { margin-top: 1rem; font-size: 0.8rem; color: #a19280; background: #2e2b28; padding: 1rem; border-radius: 1rem; max-height: 100px; overflow-y: auto; display: none; font-family: monospace !important; }
+    .status { text-align: center; font-weight: bold; color: #a8886a; margin-bottom: 1rem; display: none; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(168,136,106,0.3); border-radius: 50%; border-top-color: #a8886a; animation: spin 1s ease-in-out infinite; margin-right: 10px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="site-wrapper">
-    <h1>🎙️ 赛博提取器</h1>
-    <div class="subhead">请使用电脑 Chrome 浏览器，并开启外放。</div>
+    <h1>⚡ 赛博提取器 (云端版)</h1>
+    <div class="subhead">无需麦克风。上传视频/音频，调用云端 AI 瞬间提取文本。</div>
 
     <div class="control-panel">
       <div class="form-group">
-        <label>识别语言 (必须选对)</label>
-        <select id="langSelect">
-          <option value="ja-JP">日语 (日本語)</option>
-          <option value="zh-CN">中文 (普通话)</option>
-          <option value="en-US">英语 (English)</option>
-          <option value="ko-KR">韩语 (한국어)</option>
+        <label>识别任务类型</label>
+        <select id="taskType">
+          <option value="transcribe">转写原文 (保留原本语言)</option>
+          <option value="translate">翻译成英文 (所有语言转英文)</option>
         </select>
       </div>
     </div>
 
-    <button class="btn btn-test" id="testMicBtn">📢 麦克风测试 (点此对麦克风说话)</button>
-
     <div class="upload-box">
       <div class="upload-icon">📁</div>
-      <div style="font-weight: bold; color: #5f4e3c;">点击或拖拽上传媒体文件</div>
+      <div style="font-weight: bold; color: #5f4e3c;" id="fileName">点击选择视频或音频文件</div>
       <div style="font-size: 0.85rem; color: #b1a392; margin-top: 5px;">支持 MP4, MOV, MP3, WAV 等格式</div>
       <input type="file" id="mediaInput" accept="video/*,audio/*">
     </div>
 
-    <video id="videoPlayer" controls></video>
+    <button class="btn-start" id="startBtn" disabled>🚀 开始 AI 转写</button>
 
-    <div class="action-btns">
-      <button class="btn btn-start" id="startBtn" disabled>▶ 开始播放并识别</button>
-      <button class="btn btn-stop" id="stopBtn">⏹ 停止识别</button>
-    </div>
+    <div class="status" id="statusMsg"><span class="spinner"></span>正在上传并处理中，请勿刷新...</div>
 
-    <div class="result-box">
-      <button class="btn-copy" id="copyBtn">📋 复制文本</button>
-      <div style="font-size: 0.9rem; color: #8c7b68; margin-bottom: 0.5rem;">
-        <span class="status-dot" id="statusDot"></span> <span id="statusText">待命中...</span>
-      </div>
-      <div class="result-text" id="resultText" contenteditable="true"></div>
+    <div class="result-box" id="resultBox">
+      <div class="result-text" id="resultText"></div>
     </div>
-    
-    <div class="log-box" id="logBox"></div>
   </div>
 
   <script>
     const mediaInput = document.getElementById('mediaInput');
-    const videoPlayer = document.getElementById('videoPlayer');
+    const fileName = document.getElementById('fileName');
     const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const testMicBtn = document.getElementById('testMicBtn');
+    const resultBox = document.getElementById('resultBox');
     const resultText = document.getElementById('resultText');
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    const langSelect = document.getElementById('langSelect');
-    const copyBtn = document.getElementById('copyBtn');
-    const logBox = document.getElementById('logBox');
+    const statusMsg = document.getElementById('statusMsg');
+    const taskType = document.getElementById('taskType');
 
-    let currentMedia = null;
-    let recognition = null;
-    let isRecognizing = false;
-    let retryCount = 0;
+    let selectedFile = null;
 
-    function log(msg) {
-      logBox.style.display = 'block';
-      logBox.innerHTML += `> ${msg}<br>`;
-      logBox.scrollTop = logBox.scrollHeight;
-    }
-
-    // 兼容性检查
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("你的浏览器不支持语音识别！请使用 Google Chrome。");
-      log("SpeechRecognition API 不存在");
-      startBtn.disabled = true;
-      testMicBtn.disabled = true;
-    } else {
-      testMicBtn.style.display = 'block';
-    }
-
-    // 媒体上传
     mediaInput.addEventListener('change', function(e) {
       const file = e.target.files[0];
-      if (!file) return;
-      videoPlayer.src = URL.createObjectURL(file);
-      videoPlayer.style.display = 'block';
-      currentMedia = videoPlayer;
-      startBtn.disabled = false;
-      resultText.innerHTML = '';
-      statusText.textContent = "文件已加载，等待识别...";
-      statusDot.className = 'status-dot';
-      log(`加载文件: ${file.name}`);
-    });
-
-    // 初始化识别引擎
-    function createRecognition() {
-      const rec = new SpeechRecognition();
-      rec.continuous = true;
-      rec.interimResults = true;
-      rec.lang = langSelect.value;
-
-      rec.onstart = () => {
-        isRecognizing = true;
-        retryCount = 0; // 重置重试次数
-        statusDot.className = 'status-dot active';
-        statusText.textContent = "正在倾听并识别 (请确保麦克风未静音)...";
-        startBtn.style.display = 'none';
-        stopBtn.style.display = 'block';
-        testMicBtn.style.display = 'none';
-        log("引擎已启动");
-      };
-
-      rec.onresult = (event) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + '\n';
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        
-        if (finalTranscript) {
-          resultText.innerText += finalTranscript;
-          resultText.scrollTop = resultText.scrollHeight;
-        }
-      };
-
-      rec.onerror = (event) => {
-        log(`识别错误: ${event.error}`);
-        if (event.error === 'not-allowed') {
-          statusText.textContent = "麦克风权限被拒绝！请去浏览器设置开启。";
-          statusDot.className = 'status-dot error';
-          stopRecognition();
-        }
-      };
-
-      // 关键：如果识别意外结束，但视频还在播，强行重启它！
-      rec.onend = () => {
-        log("引擎自动断开...");
-        if (isRecognizing && currentMedia && !currentMedia.paused) {
-          if (retryCount < 50) {
-             retryCount++;
-             log(`尝试自动重连 (${retryCount})...`);
-             try { rec.start(); } catch(e) { log("重连失败: " + e.message); }
-          } else {
-             log("重连次数过多，彻底停止。");
-             stopRecognition();
-          }
-        } else {
-          stopRecognition();
-        }
-      };
-
-      return rec;
-    }
-
-    // 开始识别按钮
-    startBtn.addEventListener('click', () => {
-      if (!currentMedia) return;
-      resultText.innerText = '';
-      currentMedia.currentTime = 0;
-      currentMedia.volume = 1.0; // 强行把视频音量开到最大！
-      
-      currentMedia.play().catch(e => {
-        log("播放失败: " + e.message);
-        alert("请手动点击视频的播放按钮，然后再点识别！");
-      });
-
-      if(recognition) { recognition.abort(); }
-      recognition = createRecognition();
-      
-      try {
-        recognition.start();
-      } catch(e) {
-        log("启动异常: " + e.message);
+      if (file) {
+        selectedFile = file;
+        fileName.textContent = `已选择: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+        fileName.style.color = "#2e6b2e";
+        startBtn.disabled = false;
+        resultBox.style.display = 'none';
       }
     });
 
-    // 停止按钮
-    stopBtn.addEventListener('click', () => {
-      stopRecognition();
-    });
+    startBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
 
-    function stopRecognition() {
-      isRecognizing = false;
-      if (recognition) { recognition.stop(); }
-      if (currentMedia) { currentMedia.pause(); }
-      statusDot.className = 'status-dot';
-      statusText.textContent = "已停止";
-      startBtn.style.display = 'block';
-      stopBtn.style.display = 'none';
-      testMicBtn.style.display = 'block';
-    }
+      startBtn.disabled = true;
+      statusMsg.style.display = 'block';
+      resultBox.style.display = 'none';
+      
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("model", "whisper-large-v3"); 
+      formData.append("task", taskType.value);
 
-    // 麦克风测试按钮 (排除是麦克风坏了，还是音频本身有问题)
-    testMicBtn.addEventListener('click', () => {
-      if(recognition) { recognition.abort(); }
-      const testRec = createRecognition();
-      testRec.onstart = () => {
-        statusText.textContent = "麦克风测试中... 请说话！";
-        statusDot.className = 'status-dot active';
-        log("测试引擎启动");
-      };
-      testRec.onend = () => {
-        statusText.textContent = "测试结束";
-        statusDot.className = 'status-dot';
-        log("测试引擎结束");
-      };
-      testRec.start();
-    });
+      try {
+        // ⚠️⚠️⚠️ 注意：请把下面这行里的 gsk_... 换成你刚才在 console.groq.com 申请的真实 Key ⚠️⚠️⚠️
+        const GROQ_API_KEY = "gsk_YOUR_GROQ_API_KEY_HERE"; 
 
-    // 复制
-    copyBtn.addEventListener('click', () => {
-      if (!resultText.innerText.trim()) return;
-      navigator.clipboard.writeText(resultText.innerText).then(() => {
-        copyBtn.textContent = "✅ 已复制";
-        setTimeout(() => copyBtn.textContent = "📋 复制文本", 2000);
-      });
+        const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${GROQ_API_KEY}`
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error?.message || "API 请求失败，请检查 Key 是否正确。");
+        }
+
+        const data = await response.json();
+        
+        statusMsg.style.display = 'none';
+        resultBox.style.display = 'block';
+        resultText.innerText = data.text;
+
+      } catch (error) {
+        statusMsg.style.display = 'none';
+        alert("出错了: " + error.message);
+      } finally {
+        startBtn.disabled = false;
+      }
     });
   </script>
 </body>
