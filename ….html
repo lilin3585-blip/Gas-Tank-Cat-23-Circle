@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>ARCHIVE_091: THE FOX SAY</title>
+    <style>
+        body {
+            background-color: #050505;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        /* CRT 扫描线 */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            z-index: 999;
+            background-size: 100% 3px;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .player-box {
+            border: 2px solid #0f0;
+            padding: 40px;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            text-align: center;
+            max-width: 80%;
+            z-index: 10;
+            transition: all 0.3s;
+        }
+
+        h1 { font-size: 24px; margin-bottom: 10px; }
+        .warning-text { color: #f00; font-size: 14px; margin-bottom: 20px; text-shadow: 0 0 5px #f00; }
+
+        /* 强行改造原生文件上传按钮 */
+        input[type="file"] {
+            display: block;
+            margin: 20px auto;
+            color: #0f0;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        /* 给原生按钮加点绿色极客滤镜 */
+        input[type="file"]::file-selector-button {
+            background-color: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            cursor: pointer;
+            box-shadow: 0 0 10px #0f0;
+            margin-right: 15px;
+            transition: 0.2s;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background-color: #fff;
+            box-shadow: 0 0 20px #fff;
+        }
+
+        #status {
+            margin-top: 20px;
+            color: #f00;
+            font-size: 16px;
+            display: none;
+        }
+
+        /* 震动特效 */
+        .shake { animation: ironBallImpact 0.857s infinite; }
+        @keyframes ironBallImpact {
+            0% { transform: translateY(0) scale(1); filter: brightness(1); }
+            5% { transform: translateY(10px) scale(0.99); filter: brightness(1.5); }
+            15% { transform: translateY(-5px) scale(1.01); filter: brightness(1); }
+            100% { transform: translateY(0) scale(1); filter: brightness(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="player-box" id="playerBox">
+        <h1>ARCHIVE_091: THE FOX SAY</h1>
+        <div class="warning-text">
+            [WARNING: AUDIO DISTORTION DETECTED]<br>
+            DO NOT PLAY WITH HEADPHONES AT MAX VOLUME.
+        </div>
+
+        <!-- 直接甩出原生 input，去掉了 accept 限制 -->
+        <input type="file" id="audioFile">
+        
+        <div id="status">
+            > FILE MOUNTED...<br>
+            > SYSTEM OVERLOAD...
+        </div>
+    </div>
+
+    <audio id="foxAudio"></audio>
+
+    <script>
+        var audio = document.getElementById('foxAudio');
+        var box = document.getElementById('playerBox');
+        var fileInput = document.getElementById('audioFile');
+        var status = document.getElementById('status');
+
+        fileInput.addEventListener('change', function(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+
+            // 生成本地播放 URL
+            var fileURL = URL.createObjectURL(file);
+            audio.src = fileURL;
+
+            // 隐藏掉导入框，显示加载状态
+            fileInput.style.display = 'none';
+            status.style.display = 'block';
+            status.innerHTML = "> TAPE MOUNTED.<br>> PLAYING SOON...";
+
+            // 用户点击了文件选择，直接播放，肯定不会被拦截
+            audio.play().then(() => {
+                box.classList.add('shake');
+                status.innerHTML = "> AUDIO LEAKING...<br>> DO NOT CLOSE.";
+            }).catch(error => {
+                // 如果依然报错，说明这个 App 真的不支持解码 .flac
+                status.innerHTML = "> ERROR: " + error.message + "<br>> TRY CONVERTING TO MP3.";
+            });
+        });
+
+        audio.onended = function() {
+            box.classList.remove('shake');
+            fileInput.style.display = 'block';
+            status.style.display = 'none';
+        };
+    </script>
+</body>
+</html>
